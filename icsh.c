@@ -14,25 +14,55 @@ void prompt(){
     fflush(stdout);
 }
 
-int main() {
+void newline(char *str){
+    str[strcspn(str, "\n")] = 0;
+}
+
+int main(int argc, char *argv[]) {
     char buffer[MAX_CMD_BUFFER];
     char last_cmd[MAX_CMD_BUFFER] = "";
+    FILE *input = stdin;
+    int is_script = 0;
 
-    printf("Starting IC shell\n");
+    if(argc == 2){
+        input = fopen(argv[1], "r");
+	if(!input){
+	    perror("Cannot open specified file");
+	    return 1;
+	}
+	is_script = 1;
+    } else if(argc > 2){
+	fprintf(stderr, "Format: %s script_file\n", argv[0]);
+        return 1;
+    }
+
+    if(!is_script){
+        printf("Starting IC shell\n");
+    }
+
     while (1) {
-        prompt();
-	if(fgets(buffer, MAX_CMD_BUFFER, stdin)==NULL){
+        if(!is_script){
+	    prompt();
+	}
+	if(fgets(buffer, MAX_CMD_BUFFER, input)==NULL){
 	    break;
 	}
 
-	buffer[strcspn(buffer, "\n")] = 0;
+	newline(buffer);
+
+	if(strlen(buffer)==0){
+	    continue;
+	}
 
 	//Double-bang:repeats last command
 	if(strcmp(buffer, "!!") == 0) {
 	    if(strlen(last_cmd)==0){
 	        continue;
 	    }
-	    printf("%s\n", last_cmd);
+	    if(is_script){
+	    }else{
+	        printf("%s\n", last_cmd);
+	    }
 	    strncpy(buffer,last_cmd, MAX_CMD_BUFFER);
 	}else{
 	    strncpy(last_cmd,buffer,MAX_CMD_BUFFER);
@@ -59,11 +89,21 @@ int main() {
 	    if(arg){
 	        code = atoi(arg) & 0xFF;	
 	    }
-	    printf("bye\n");
-	    exit(code);
+	    if(!is_script){
+ 		printf("bye\n");
+	    }
+	    if(is_script){
+	        fclose(input);
+	    }
+	    return code;
 	}
 
 	printf("bad command\n");
     }
+
+    if(is_script){
+        fclose(input);
+    }
+
     return 0;
 }
