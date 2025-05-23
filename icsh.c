@@ -41,66 +41,85 @@ int main(int argc, char *argv[]) {
     }
 
     while (1) {
-        if(!is_script){
-	    prompt();
-	}
-	if(fgets(buffer, MAX_CMD_BUFFER, input)==NULL){
-	    break;
-	}
+		if(!is_script){
+			prompt();
+		}
+		if(fgets(buffer, MAX_CMD_BUFFER, input)==NULL){
+			break;
+		}
 
-	newline(buffer);
+		newline(buffer);
 
-	if(strlen(buffer)==0){
-	    continue;
-	}
+		if(strlen(buffer)==0){
+			continue;
+		}
 
-	//Double-bang:repeats last command
-	if(strcmp(buffer, "!!") == 0) {
-	    if(strlen(last_cmd)==0){
-	        continue;
-	    }
-	    if(is_script){
-	    }else{
-	        printf("%s\n", last_cmd);
-	    }
-	    strncpy(buffer,last_cmd, MAX_CMD_BUFFER);
-	}else{
-	    strncpy(last_cmd,buffer,MAX_CMD_BUFFER);
-	}
+		//Double-bang:repeats last command
+		if(strcmp(buffer, "!!") == 0) {
+			if(strlen(last_cmd)==0){
+				continue;
+			}
+			if(is_script){
+			}else{
+				printf("%s\n", last_cmd);
+			}
+			strncpy(buffer,last_cmd, MAX_CMD_BUFFER);
+		}else{
+			strncpy(last_cmd,buffer,MAX_CMD_BUFFER);
+		}
 
-	char *cmd = strtok(buffer, " ");
-	if(!cmd){
-	    continue;
-	} 
-	
-	//echo: prints given text
-	if(strcmp(cmd, "echo") == 0){
-	    char *args = strtok(NULL, "");
-	    if(args){
-	        printf("%s\n", args);
-	    }
-	    continue;
-	}
+		char *cmd = strtok(buffer, " ");
+		if(!cmd){
+			continue;
+		} 
+		
+		//echo: prints given text
+		if(strcmp(cmd, "echo") == 0){
+			char *args = strtok(NULL, "");
+			if(args){
+				printf("%s\n", args);
+			}
+			continue;
+		}
 
-	//exit
-	if(strcmp(cmd, "exit") ==0){
-	    char *arg = strtok(NULL, " ");
-	    int code = 0;
-	    if(arg){
-	        code = atoi(arg) & 0xFF;	
-	    }
-	    if(!is_script){
- 		printf("bye\n");
-	    }
-	    if(is_script){
-	        fclose(input);
-	    }
-	    return code;
-	}
+		//exit
+		if(strcmp(cmd, "exit") ==0){
+			char *arg = strtok(NULL, " ");
+			int code = 0;
+			if(arg){
+				code = atoi(arg) & 0xFF;	
+			}
+			if(!is_script){
+			printf("bye\n");
+			}
+			if(is_script){
+				fclose(input);
+			}
+			return code;
+		}
 
-	printf("bad command\n");
+		pid_t pid = fork();
+		if(pid<0){
+			perror("fork failed");
+			continue;
+		}else if (pid==0){
+			char *args[64];
+			int i = 0;
+			args[i++] = cmd;
+			char *token;
+			while((token = strtok(NULL, " "))!=NULL){
+				args[i++] = token;
+			}
+			args[i] = NULL;
+			execvp(cmd,args);
+			perror("Command not found");
+			exit(1);
+		}else{
+			int status;
+			waitpid(pid, &status, 0);
+		}
+
     }
-
     if(is_script){
         fclose(input);
     }
